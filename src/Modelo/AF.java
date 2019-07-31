@@ -34,7 +34,6 @@ public class AF {
     private File fichero;
     private String cadena;
 
-    
     private boolean band = false;
 
     public AF() {
@@ -110,6 +109,22 @@ public class AF {
         return estadosDestino;
     }
 
+    public Boolean crearInsertarEstado(estadoFusionado efn, AF AFD) {
+        String nombreEst = efn.e.getNombreEstado();
+        if (!efn.existeDestino(AFD.estado, nombreEst)) { //Si el destino del fusionado no existe insertarlo                   
+            estado ne = new estado(efn.e.getNombreEstado(), "Rechazo", efn.e.isEstadoIncial()); //Si entra uno de aceptacion o inicial actualizar
+            AFD.insertarEstado(ne);
+//            tripleta axt = (tripleta) AFD.mat.ultimoNodo().getDato();
+//            int idUltimoNodo = axt.getFila();
+            //AFD.mat.agregarNodoCabeza(idUltimoNodo + 1); //Agego nodo cambeza con el mismo indice que en la lista de estados
+//            suTransicion = idUltimoNodo + 1;
+//                    nombreTransicion = efn.getNombrenuevoEstado();
+//            nombreTransicion = efn.e.getNombreEstado();
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Convierte un AFND a AFD
      *
@@ -170,17 +185,8 @@ public class AF {
             estado std = (estado) this.estado.get(idAct);
             String estadoAct = (String) std.getNombreEstado();
             String simboloE = (String) this.simbolosEntrada.get(idS);
-            if (!efn.existeDestino(AFD.estado, nombreEst)) { //Si el destino del fusionado no existe insertarlo                   
-                estado ne = new estado(efn.e.getNombreEstado(), "Rechazo", efn.e.isEstadoIncial()); //Si entra uno de aceptacion o inicial actualizar
-                AFD.insertarEstado(ne);
-                tripleta axt = (tripleta) AFD.mat.ultimoNodo().getDato();
-                int idUltimoNodo = axt.getFila();
-                //AFD.mat.agregarNodoCabeza(idUltimoNodo + 1); //Agego nodo cambeza con el mismo indice que en la lista de estados
-                suTransicion = idUltimoNodo + 1;
-//                    nombreTransicion = efn.getNombrenuevoEstado();
-                nombreTransicion = efn.e.getNombreEstado();
-
-            } else {// SI el destino existe encontrar
+            if (this.crearInsertarEstado(efn, AFD)) { //Si el destino del fusionado no existe insertarlo                   
+                // SI el destino existe encontrar
                 suTransicion = efn.getIndiceEstadoExistente();
                 nombreTransicion = nombreEst;
             }
@@ -892,7 +898,7 @@ public class AF {
     public void convertirAutomata() {
         AF AFD = this.cvAFNDtoAFD();
         this.mat = AFD.mat;
-        this.cadena=AFD.cadena;
+        this.cadena = AFD.cadena;
         this.simbolosEntrada = AFD.simbolosEntrada;
         this.estado = AFD.estado;
     }
