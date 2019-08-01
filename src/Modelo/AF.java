@@ -149,6 +149,12 @@ public class AF {
         AFD.estado.add(ei); //Agregar estado inicial
         AFD.setSimbolosEntrada(this.simbolosEntrada);
         Dnode primerNodo = this.mat.primerNodo();
+        
+        //Aumentar en una unidad la fila y agregar cantidad de columnas
+        tripleta aux1 = (tripleta) AFD.mat.getMat().getDato();
+        tripleta aux2 = (tripleta) this.mat.getMat().getDato();
+        aux1.setFila(1);
+        aux1.setColumna(aux2.getColumna());
 
         while (primerNodo != n) {
             estadoFusionado efn = this.fucionarEstados(AFD, n);
