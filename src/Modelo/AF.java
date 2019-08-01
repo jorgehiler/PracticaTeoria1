@@ -33,8 +33,7 @@ public class AF {
     private JFileChooser fc;
     private File fichero;
     private String cadena;
-
-    private boolean band = false;
+    private ArrayList transicionEstadoAFD = new ArrayList();
 
     public AF() {
         this.simbolosEntrada = new ArrayList();
@@ -84,9 +83,10 @@ public class AF {
         return ef;
 
     }
-
-    ArrayList obtenerTransacciones(ArrayList estados, estadoFusionado sf) {
-
+    
+    //Para cualquier estado fusionado o no, construye el Array de transiciones de ese estado, el array de transiciones corresponde conincide con las posiciones en el automata
+    void construirTransacciones(ArrayList estadosFusionados, estadoFusionado sf) {
+        ArrayList transPorSimbolo = new ArrayList();
         ArrayList estadosDestino = new ArrayList();
         ArrayList estadosOrigen = sf.transiciones;
         int cantidadSimbolos = this.simbolosEntrada.size();
@@ -94,32 +94,32 @@ public class AF {
         for (int i = 0; i <= n - 1; i++) {
             int j = 1;
             int origen = (int) estadosOrigen.get(i);
-            while (j <= cantidadSimbolos) {
+            while (j <= cantidadSimbolos) { //Las transiciones del estado fusionado para el simbolo J
+                estadosDestino = new ArrayList();
                 Dnode estadoDestino = this.mat.recuperNodo(origen, j);
                 tripleta tp = (tripleta) estadoDestino.getDato();
                 ArrayList aux = (ArrayList) tp.getValor();
                 j++;
-                for (int k = 0; k <= aux.size() - 1; k++) {
+                for (int k = 0; k <= aux.size() - 1; k++) {//Agrega al array todas las transiciones del estado correspondientes al simbolo j                    
                     estadosDestino.add(aux.get(k));
+                    transPorSimbolo.add(estadosDestino);
                 }
+
                 j++;
             }
 
         }
-        return estadosDestino;
+        this.transicionEstadoAFD.add(transPorSimbolo);//Agrega todas las transicines de un estado para un simbolo especifico
     }
 
+    //Verifica si el estadoFusionado existe, si existe retorna false. de lo contrario lo crea y retorna true
     public Boolean crearInsertarEstado(estadoFusionado efn, AF AFD) {
         String nombreEst = efn.e.getNombreEstado();
         if (!efn.existeDestino(AFD.estado, nombreEst)) { //Si el destino del fusionado no existe insertarlo                   
             estado ne = new estado(efn.e.getNombreEstado(), "Rechazo", efn.e.isEstadoIncial()); //Si entra uno de aceptacion o inicial actualizar
             AFD.insertarEstado(ne);
-//            tripleta axt = (tripleta) AFD.mat.ultimoNodo().getDato();
-//            int idUltimoNodo = axt.getFila();
-            //AFD.mat.agregarNodoCabeza(idUltimoNodo + 1); //Agego nodo cambeza con el mismo indice que en la lista de estados
-//            suTransicion = idUltimoNodo + 1;
-//                    nombreTransicion = efn.getNombrenuevoEstado();
-//            nombreTransicion = efn.e.getNombreEstado();
+            ArrayList efA = efn.getTransiciones(); //posición en el automata Antiguo de los estados fusionados
+            this.construirTransacciones(efA, efn); //Define las transiciones del estado destino
             return true;
         }
         return false;
@@ -131,53 +131,20 @@ public class AF {
      */
     public AF cvAFNDtoAFD() {
         Dnode n = this.mat.primerNodo().getLd();
-        //Construir copia de nuevo AD
         AF AFD = new AF();
         AFD.construirAutomata();
-
-        //ArrayList nuevosEstados = new ArrayList();
-        int i = 0;
-
-        //Primera transición
-        // AFD.mat.agregarNodoCabeza(0);
-//        estadoFusionado ef = this.fucionarEstados(AFD, n);
-        //Nueva Transición
-        //Nueva Transicion
-//        estado estadoActual = (estado) this.estado.get(i);
-//        tripleta tp = (tripleta) x.getDato();
-//        int se = tp.getColumna();
-//        AFD.cargarTransicion(this.recuperSimboloEntrada(se), estadoActual.getNombreEstado(), ef.getE().getNombreEstado());
-        //Configuración inicial de nuevo AFD
         AFD.mat.agregarNodoCabeza(0);
         estado aux = (estado) this.estado.get(0); //EstadoInicial
         String nombreEstado = aux.getNombreEstado(); //Estado inicial
         String tipoEstado = aux.getTipoEstado(); //EstadoIicial
         estado ei = new estado(nombreEstado, tipoEstado, true);
         AFD.estado.add(ei); //Agregar estado inicial
-//        tripleta auxt = (tripleta) AFD.mat.primerNodo().getDato();
-//        Dnode x = (Dnode) auxt.getValor(); //apuntador primer nodo cabeza
-
-        //Agregar simbolos de entrada
         AFD.setSimbolosEntrada(this.simbolosEntrada);
-
-        //Recorrer primer estado de antiguo AF
-        //fusionar estado 
-        //crear estados a los que va el estado creado (ya Existe? si existe lo devuelve)
-        //insertar nuevo estado si no existe el fusionado en el nuevo AFD
-        //Hacer la transición a ese estado desde el nodo X actual
-        //Terminar de recorrer primer estado
-        //actualizar nodo X
-        //Recorrer nodos X
-        //Hacer transición 1(Bucar si existe en la lista de estados de AFD actual o buscar en la lista de AF antiguo y crear copia e insertar)
-        //Hacer transicioón al estado obtenido anteriormente
-        //Actualiarnodo X
-        //terminar recorrido
         Dnode primerNodo = this.mat.primerNodo();
 
         while (primerNodo != n) {
             estadoFusionado efn = this.fucionarEstados(AFD, n);
             String nombreEst = efn.e.getNombreEstado();
-            int suTransicion = 0;
             String nombreTransicion = "";
             tripleta axi = (tripleta) n.getDato();
             int idAct = axi.getFila(); //Estado actual
@@ -185,12 +152,9 @@ public class AF {
             estado std = (estado) this.estado.get(idAct);
             String estadoAct = (String) std.getNombreEstado();
             String simboloE = (String) this.simbolosEntrada.get(idS);
-            if (this.crearInsertarEstado(efn, AFD)) { //Si el destino del fusionado no existe insertarlo                   
-                // SI el destino existe encontrar
-                suTransicion = efn.getIndiceEstadoExistente();
+            if (this.crearInsertarEstado(efn, AFD)) { //Si el destino del fusionado existe insertarlo                   
                 nombreTransicion = nombreEst;
             }
-            //Conociendo el estado al que se realizara la transición se hace
             AFD.cargarTransicion(simboloE, estadoAct, nombreTransicion);
             n = n.getLd();
         }
@@ -260,7 +224,6 @@ public class AF {
         mat.agregarTransicion(s, eo, ed);
         mat.muestraMatriz();
 
-        this.band = true;
 
     }
 
