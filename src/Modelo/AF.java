@@ -16,6 +16,8 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import sun.font.TrueTypeFont;
 import java.lang.Object;
+import java.util.HashSet;
+import java.util.Set;
 
 public class AF {
 
@@ -91,31 +93,56 @@ public class AF {
         ArrayList estadosOrigen = sf.transiciones;
         int cantidadSimbolos = this.simbolosEntrada.size();
         int n = estadosOrigen.size();
-        for (int i = 0; i <= n - 1; i++) {
-            int j = 0;
-            int origen = (int) estadosOrigen.get(i);
+//        for (int i = 0; i <= n - 1; i++) {
+//            int j = 0;
+//            int origen = (int) estadosOrigen.get(i);
+//            estadosDestino = new ArrayList();
+//            while (j <= cantidadSimbolos - 1) { //Las transiciones del estado fusionado para el simbolo J
+////                estadosDestino = new ArrayList();
+//                Dnode estadoDestino = this.mat.recuperNodo(origen, j);
+//                tripleta tp = (tripleta) estadoDestino.getDato();
+//                ArrayList aux = (ArrayList) tp.getValor();
+//                for (int k = 0; k <= aux.size() - 1; k++) {//Agrega al array todas las transiciones del estado correspondientes al simbolo j                    
+//                    estadosDestino.add(aux.get(k));
+//                }
+//                j++;
+//                transPorSimbolo.add(estadosDestino);
+//            }
+//
+//        }
+        int j = 0;
+        Set<String> set;
+        while (j <= cantidadSimbolos - 1) { //Las transiciones del estado fusionado para el simbolo J
             estadosDestino = new ArrayList();
-            while (j <= cantidadSimbolos - 1) { //Las transiciones del estado fusionado para el simbolo J
+            for (int i = 0; i <= n - 1; i++) { //Transicion de los estados AC cuando ingresa el simbolo j
+                int origen = (int) estadosOrigen.get(i);
                 Dnode estadoDestino = this.mat.recuperNodo(origen, j);
                 tripleta tp = (tripleta) estadoDestino.getDato();
                 ArrayList aux = (ArrayList) tp.getValor();
                 for (int k = 0; k <= aux.size() - 1; k++) {//Agrega al array todas las transiciones del estado correspondientes al simbolo j                    
                     estadosDestino.add(aux.get(k));
                 }
-                j++;
             }
+            //Elimiinar repeticiones en estado destino
+            set = new HashSet<>(estadosDestino);
+            estadosDestino.clear();
+            estadosDestino.addAll(set);
+
             transPorSimbolo.add(estadosDestino);
+            j++;
 
         }
+
         this.transicionEstadoAFD.add(transPorSimbolo);//Agrega todas las transicines de un estado para un simbolo especifico
     }
-
     //Verifica si el estadoFusionado existe, si existe retorna false. de lo contrario lo crea y retorna true
+
     public Boolean crearInsertarEstado(estadoFusionado efn, AF AFD) {
         String nombreEst = efn.e.getNombreEstado();
         if (!efn.existeDestino(AFD.estado, nombreEst)) { //Si el destino del fusionado no existe insertarlo                   
             estado ne = new estado(efn.e.getNombreEstado(), "Rechazo", efn.e.isEstadoIncial()); //Si entra uno de aceptacion o inicial actualizar
             AFD.insertarEstado(ne);
+
             ArrayList efA = efn.getTransiciones(); //posición en el automata Antiguo de los estados fusionados
             this.construirTransacciones(efA, efn); //Define las transiciones del estado destino
             return true;
@@ -156,7 +183,48 @@ public class AF {
             AFD.cargarTransicion(simboloE, estadoAct, nombreTransicion);
             n = n.getLd();
         }
+
+        tripleta auxt = (tripleta) AFD.mat.primerNodo().getDato();
+        Dnode x = (Dnode) auxt.getValor();
+        int k = 0;
+        ArrayList<estado> estadosAFD = AFD.estado;
+        while (!AFD.mat.findeRecorrido(x)) { //Recorre los estados para agregar sus transiciones
+            int i = 0;
+            estado estAux = estadosAFD.get(k + 1);
+            tripleta filaTripleta = (tripleta) x.getDato();
+            int fila = filaTripleta.getFila();
+            ArrayList indicesEstados = (ArrayList) this.transicionEstadoAFD.get(k); //Los indices del estado al que hace transición por entrada de cada simbolo
+            String nombreTransicion = "";
+            while (i <= this.simbolosEntrada.size() - 1) { //Po cada simbolo se inserta un estado
+                ArrayList a = (ArrayList) indicesEstados.get(i);
+                String nombreEst = this.decodificarNombreEstado(this.estado, a); //Decodifica el nombre del estado al que se hace tansicion correpondiente al simbolo de la posicion i
+                estado e = new estado(nombreEst, "Rechazo", false);
+                estadoFusionado efn = new estadoFusionado(e, (ArrayList) indicesEstados.get(i)); //Estado al que hace transicion
+                if (!this.crearInsertarEstado(efn, AFD)) { //Si el destino del fusionado existe insertarlo                   
+                    nombreTransicion = nombreEst;
+                }
+                String simboloEntrada = (String) AFD.simbolosEntrada.get(i);
+                AFD.cargarTransicion(simboloEntrada, estAux.getNombreEstado(), nombreTransicion);
+                i++;
+            }
+            tripleta axt = (tripleta) x.getDato();
+            x = (Dnode) axt.getValor();
+            k++;
+        }
+
         return AFD;
+    }
+
+    public String decodificarNombreEstado(ArrayList<estado> estados, ArrayList arrIndiceE) {
+        int n = arrIndiceE.size();
+        String nombreEstado = "";
+        for (int k = 0; k <= n - 1; k++) {
+            int indiceEstado = (int) arrIndiceE.get(k);
+            estado aux = (estado) estados.get(indiceEstado);
+            nombreEstado = nombreEstado + aux.getNombreEstado();
+        }
+        return nombreEstado;
+
     }
 
     public matrizForma1 getMat() {
