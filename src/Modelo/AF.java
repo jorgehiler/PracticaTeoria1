@@ -83,7 +83,7 @@ public class AF {
         return ef;
 
     }
-    
+
     //Para cualquier estado fusionado o no, construye el Array de transiciones de ese estado, el array de transiciones corresponde conincide con las posiciones en el automata
     void construirTransacciones(ArrayList estadosFusionados, estadoFusionado sf) {
         ArrayList transPorSimbolo = new ArrayList();
@@ -92,21 +92,19 @@ public class AF {
         int cantidadSimbolos = this.simbolosEntrada.size();
         int n = estadosOrigen.size();
         for (int i = 0; i <= n - 1; i++) {
-            int j = 1;
+            int j = 0;
             int origen = (int) estadosOrigen.get(i);
-            while (j <= cantidadSimbolos) { //Las transiciones del estado fusionado para el simbolo J
-                estadosDestino = new ArrayList();
+            estadosDestino = new ArrayList();
+            while (j <= cantidadSimbolos - 1) { //Las transiciones del estado fusionado para el simbolo J
                 Dnode estadoDestino = this.mat.recuperNodo(origen, j);
                 tripleta tp = (tripleta) estadoDestino.getDato();
                 ArrayList aux = (ArrayList) tp.getValor();
-                j++;
                 for (int k = 0; k <= aux.size() - 1; k++) {//Agrega al array todas las transiciones del estado correspondientes al simbolo j                    
                     estadosDestino.add(aux.get(k));
-                    transPorSimbolo.add(estadosDestino);
                 }
-
                 j++;
             }
+            transPorSimbolo.add(estadosDestino);
 
         }
         this.transicionEstadoAFD.add(transPorSimbolo);//Agrega todas las transicines de un estado para un simbolo especifico
@@ -223,7 +221,6 @@ public class AF {
         int ed = this.buscarEstadoEnColeccion(estadoTransicion);
         mat.agregarTransicion(s, eo, ed);
         mat.muestraMatriz();
-
 
     }
 
