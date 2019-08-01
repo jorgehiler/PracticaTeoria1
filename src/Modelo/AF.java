@@ -93,23 +93,6 @@ public class AF {
         ArrayList estadosOrigen = sf.transiciones;
         int cantidadSimbolos = this.simbolosEntrada.size();
         int n = estadosOrigen.size();
-//        for (int i = 0; i <= n - 1; i++) {
-//            int j = 0;
-//            int origen = (int) estadosOrigen.get(i);
-//            estadosDestino = new ArrayList();
-//            while (j <= cantidadSimbolos - 1) { //Las transiciones del estado fusionado para el simbolo J
-////                estadosDestino = new ArrayList();
-//                Dnode estadoDestino = this.mat.recuperNodo(origen, j);
-//                tripleta tp = (tripleta) estadoDestino.getDato();
-//                ArrayList aux = (ArrayList) tp.getValor();
-//                for (int k = 0; k <= aux.size() - 1; k++) {//Agrega al array todas las transiciones del estado correspondientes al simbolo j                    
-//                    estadosDestino.add(aux.get(k));
-//                }
-//                j++;
-//                transPorSimbolo.add(estadosDestino);
-//            }
-//
-//        }
         int j = 0;
         Set<String> set;
         while (j <= cantidadSimbolos - 1) { //Las transiciones del estado fusionado para el simbolo J
@@ -140,7 +123,7 @@ public class AF {
     public Boolean crearInsertarEstado(estadoFusionado efn, AF AFD) {
         String nombreEst = efn.e.getNombreEstado();
         if (!efn.existeDestino(AFD.estado, nombreEst)) { //Si el destino del fusionado no existe insertarlo                   
-            estado ne = new estado(efn.e.getNombreEstado(), "Rechazo", efn.e.isEstadoIncial()); //Si entra uno de aceptacion o inicial actualizar
+            estado ne = new estado(efn.e.getNombreEstado(), efn.e.getTipoEstado(), efn.e.isEstadoIncial()); //Si entra uno de aceptacion o inicial actualizar
             AFD.insertarEstado(ne);
 
             ArrayList efA = efn.getTransiciones(); //posición en el automata Antiguo de los estados fusionados
@@ -198,10 +181,27 @@ public class AF {
             while (i <= this.simbolosEntrada.size() - 1) { //Po cada simbolo se inserta un estado
                 ArrayList a = (ArrayList) indicesEstados.get(i);
                 String nombreEst = this.decodificarNombreEstado(this.estado, a); //Decodifica el nombre del estado al que se hace tansicion correpondiente al simbolo de la posicion i
-                estado e = new estado(nombreEst, "Rechazo", false);
+
+                //Codigo para obtener si el nuevo estado es de rechazo o acepacion
+                String tipoE = "Rechazo";
+//                ArrayList auxAee = (ArrayList) this.transicionEstadoAFD.get(k);
+                int nj = a.size();
+                for (int ij = 0; ij <= nj - 1; ij++) {
+                    int j = (int) a.get(ij);
+
+                    //verificar que no exista la fusión 
+                    estado et = (estado) this.estado.get(j);
+                    //obtenerTransiciones al nuevo estado
+                    //Verificar que no exista permutando los indices
+                    if (et.getTipoEstado().equals("Aceptacion")) {  //SI uno de los estados a fusionar es de aceptacion 
+                        tipoE = "Aceptacion";
+                    }
+                }
+
+                estado e = new estado(nombreEst, tipoE, false);
                 estadoFusionado efn = new estadoFusionado(e, (ArrayList) indicesEstados.get(i)); //Estado al que hace transicion
-                this.crearInsertarEstado(efn, AFD);  //Si el destino del fusionado existe insertarlo                                  
-                nombreTransicion=nombreEst;
+                this.crearInsertarEstado(efn, AFD);  //Si el destino del fusionado existe insertarlo, sino crearlo e insertarlo                                  
+                nombreTransicion = nombreEst;
                 String simboloEntrada = (String) AFD.simbolosEntrada.get(i);
                 AFD.cargarTransicion(simboloEntrada, estAux.getNombreEstado(), nombreTransicion);
                 i++;
