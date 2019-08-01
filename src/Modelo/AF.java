@@ -192,7 +192,7 @@ public class AF {
             int i = 0;
             estado estAux = estadosAFD.get(k + 1);
             tripleta filaTripleta = (tripleta) x.getDato();
-            int fila = filaTripleta.getFila();
+//            int fila = filaTripleta.getFila();
             ArrayList indicesEstados = (ArrayList) this.transicionEstadoAFD.get(k); //Los indices del estado al que hace transición por entrada de cada simbolo
             String nombreTransicion = "";
             while (i <= this.simbolosEntrada.size() - 1) { //Po cada simbolo se inserta un estado
@@ -200,9 +200,8 @@ public class AF {
                 String nombreEst = this.decodificarNombreEstado(this.estado, a); //Decodifica el nombre del estado al que se hace tansicion correpondiente al simbolo de la posicion i
                 estado e = new estado(nombreEst, "Rechazo", false);
                 estadoFusionado efn = new estadoFusionado(e, (ArrayList) indicesEstados.get(i)); //Estado al que hace transicion
-                if (!this.crearInsertarEstado(efn, AFD)) { //Si el destino del fusionado existe insertarlo                   
-                    nombreTransicion = nombreEst;
-                }
+                this.crearInsertarEstado(efn, AFD);  //Si el destino del fusionado existe insertarlo                                  
+                nombreTransicion=nombreEst;
                 String simboloEntrada = (String) AFD.simbolosEntrada.get(i);
                 AFD.cargarTransicion(simboloEntrada, estAux.getNombreEstado(), nombreTransicion);
                 i++;
