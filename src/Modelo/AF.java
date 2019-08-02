@@ -21,25 +21,17 @@ import java.util.Set;
 
 public class AF {
 
-    private ArrayList simbolosEntrada;
-
-    public ArrayList getSimbolosEntrada() {
-        return simbolosEntrada;
-    }
-
-    public void setSimbolosEntrada(ArrayList simbolosEntrada) {
-        this.simbolosEntrada = simbolosEntrada;
-    }
-    private ArrayList estado;
+    private ArrayList estados;
     private matrizForma1 mat;
     private JFileChooser fc;
     private File fichero;
     private String cadena;
-    private ArrayList transicionEstadoAFD = new ArrayList();
+    private final ArrayList transicionEstadoAFD = new ArrayList();
+    private ArrayList simbolosEntrada;
 
     public AF() {
         this.simbolosEntrada = new ArrayList();
-        this.estado = new ArrayList();
+        this.estados = new ArrayList();
         this.fc = new JFileChooser();
         this.fichero = null;
     }
@@ -48,86 +40,85 @@ public class AF {
         mat = new matrizForma1(0, 0);
     }
 
-    public estadoFusionado fucionarEstados(AF automata, Dnode transicionAnalizada) {
-
-        tripleta tp = (tripleta) transicionAnalizada.getDato();
-        ArrayList listIndiceEstado = (ArrayList) tp.getValor();
+    /**
+     *
+     * @param automata Autómata al que pertenecen los estados a fusionar
+     * @param estadosFusionar nodo que contienen los estados a fusionar
+     * @return objeto que contienene el objeto estado resultante y un ArrayList
+     * con las posiciones de los estados fusionados "indexTransiciones"
+     */
+    public estadoFusionado fusionarEstados(AF automata, Dnode estadosFusionar) {
+        ArrayList listIndicesEstado = ut.getArrayDataDnode(estadosFusionar);
         ArrayList indexTransiciones = new ArrayList();
-        int n = listIndiceEstado.size();
+        int n = listIndicesEstado.size();
         estado e = new estado();
-
         if (n == 1) {
-            int i = (int) listIndiceEstado.get(0);
-            estado auxE = (estado) this.estado.get(i); //obtener nombre de estado AF actual Dnode
+            int i = (int) listIndicesEstado.get(0);
+            estado auxE = (estado) this.estados.get(i); //obtener nombre de estado AF actual Dnode
             e.setNombreEstado(auxE.getNombreEstado());
             e.setTipoEstado(auxE.getTipoEstado());
             indexTransiciones.add(i);
         } else { // Hace transición a más de un estado
-            String tipoE = "Rechazo";
             String nuevoNombre = "";
-            for (int i = 0; i <= n - 1; i++) {
-                //verificar que no exista la fusión 
-                int j = (int) listIndiceEstado.get(i); //indice de la transicion al estado n-simo i
-                estado et = (estado) this.estado.get(j);
+            for (int i = 0; i <= n - 1; i++) {                 //verificar que no exista la fusión 
+                int j = (int) listIndicesEstado.get(i); //indice de la transicion al estado n-simo i
+                estado et = (estado) this.estados.get(j);
                 nuevoNombre = nuevoNombre + (String) et.getNombreEstado();
-                //obtenerTransiciones al nuevo estado
                 indexTransiciones.add(j); //Transiciones al nuevo estado
-                //Verificar que no exista permutando los indices
-                if (et.getTipoEstado().equals("Aceptacion")) {  //SI uno de los estados a fusionar es de aceptacion 
-                    tipoE = "Aceptacion";
-                }
             }
             e.setNombreEstado(nuevoNombre);
-            e.setTipoEstado(tipoE);
+            e.setTipoEstado(this.obtenerTipoEstado(listIndicesEstado));
         }
-
         estadoFusionado ef = new estadoFusionado(e, indexTransiciones);
         return ef;
-
     }
 
-    //Para cualquier estado fusionado o no, construye el Array de transiciones de ese estado, el array de transiciones corresponde conincide con las posiciones en el automata
-    void construirTransacciones(ArrayList estadosFusionados, estadoFusionado sf) {
+    /**
+     * Metodo que construye ArrayLisy con las transasiones por cada simbolo de
+     * entrada para un estado fusionado o no. Cada posición i del ArrayList
+     * representa la transicion que hace el estado fusionado k+1 debido a la
+     * entrada del simbolo i. El metodo almacena cada ArrayList de transiciones
+     * en el ArrayList "transicionEstadoAFD" en el que la posicion cero
+     * representa al estado 1 en el automata.
+     *
+     * @param ef Contiene un ArrayList en el que cada elemento tiene un indice
+     * de la posición de los estados fusionados en el AFND
+     */
+    void construirTransicion(estadoFusionado ef) {
         ArrayList transPorSimbolo = new ArrayList();
-        ArrayList estadosDestino = new ArrayList();
-        ArrayList estadosOrigen = sf.transiciones;
+        ArrayList estadosDestino;
+        ArrayList estadosOrigen = ef.transiciones;
         int cantidadSimbolos = this.simbolosEntrada.size();
-        int n = estadosOrigen.size();
         int j = 0;
-        Set<String> set;
-        while (j <= cantidadSimbolos - 1) { //Las transiciones del estado fusionado para el simbolo J
+        while (j <= cantidadSimbolos - 1) { 
             estadosDestino = new ArrayList();
-            for (int i = 0; i <= n - 1; i++) { //Transicion de los estados AC cuando ingresa el simbolo j
+            for (int i = 0; i <= estadosOrigen.size() - 1; i++) { 
                 int origen = (int) estadosOrigen.get(i);
                 Dnode estadoDestino = this.mat.recuperNodo(origen, j);
-                tripleta tp = (tripleta) estadoDestino.getDato();
-                ArrayList aux = (ArrayList) tp.getValor();
-                for (int k = 0; k <= aux.size() - 1; k++) {//Agrega al array todas las transiciones del estado correspondientes al simbolo j                    
+                ArrayList aux = ut.getArrayDataDnode(estadoDestino);
+                for (int k = 0; k <= aux.size() - 1; k++) {
                     estadosDestino.add(aux.get(k));
                 }
             }
-            //Elimiinar repeticiones en estado destino
-            set = new HashSet<>(estadosDestino);
-            estadosDestino.clear();
-            estadosDestino.addAll(set);
-
+            this.eliminarRepeticionesArrayList(estadosDestino);
             transPorSimbolo.add(estadosDestino);
             j++;
-
         }
-
-        this.transicionEstadoAFD.add(transPorSimbolo);//Agrega todas las transicines de un estado para un simbolo especifico
+        this.transicionEstadoAFD.add(transPorSimbolo);
     }
-    //Verifica si el estadoFusionado existe, si existe retorna false. de lo contrario lo crea y retorna true
 
-    public Boolean crearInsertarEstado(estadoFusionado efn, AF AFD) {
-        String nombreEst = efn.e.getNombreEstado();
-        if (!efn.existeDestino(AFD.estado, nombreEst)) { //Si el destino del fusionado no existe insertarlo                   
-            estado ne = new estado(efn.e.getNombreEstado(), efn.e.getTipoEstado(), efn.e.isEstadoIncial()); //Si entra uno de aceptacion o inicial actualizar
+    /**
+     * Metodo que crea e inserta de ser necesario, los estados a los que hace transicion el estadoFusionado indicaod
+     * @param ef
+     * @param AFD Automata deterministico al que pertenece el estado fusionado.
+     * @return 
+     */
+    public Boolean crearInsertarEstados(estadoFusionado ef, AF AFD) {
+        String nombreEst = ef.e.getNombreEstado();
+        if (!ef.existeEstado(AFD.estados, nombreEst)) { //Si el destino del estado fusionado no existe insertarlo                   
+            estado ne = new estado(ef.e.getNombreEstado(), ef.e.getTipoEstado(), ef.e.isEstadoIncial()); //Si entra uno de aceptacion o inicial actualizar
             AFD.insertarEstado(ne);
-
-            ArrayList efA = efn.getTransiciones(); //posición en el automata Antiguo de los estados fusionados
-            this.construirTransacciones(efA, efn); //Define las transiciones del estado destino
+            this.construirTransicion(ef); //Define las transiciones del estado destino
             return true;
         }
         return false;
@@ -137,19 +128,16 @@ public class AF {
      * Convierte un AFND a AFD
      *
      */
-    public AF cvAFNDtoAFD() {
+    public AF transformarAFNDaAFD() {
         Dnode n = this.mat.primerNodo().getLd();
         AF AFD = new AF();
         AFD.construirAutomata();
         AFD.mat.agregarNodoCabeza(0);
-        estado aux = (estado) this.estado.get(0); //EstadoInicial
-        String nombreEstado = aux.getNombreEstado(); //Estado inicial
-        String tipoEstado = aux.getTipoEstado(); //EstadoIicial
-        estado ei = new estado(nombreEstado, tipoEstado, true);
-        AFD.estado.add(ei); //Agregar estado inicial
+        estado ei = new estado(ut.getNombreEstado(estados, 0), ut.getTipoEstado(estados, 0), true); //Estado inicial nuevo
+        AFD.estados.add(ei); //Agregar estado inicial
         AFD.setSimbolosEntrada(this.simbolosEntrada);
         Dnode primerNodo = this.mat.primerNodo();
-        
+
         //Aumentar en una unidad la fila y agregar cantidad de columnas
         tripleta aux1 = (tripleta) AFD.mat.getMat().getDato();
         tripleta aux2 = (tripleta) this.mat.getMat().getDato();
@@ -157,16 +145,16 @@ public class AF {
         aux1.setColumna(aux2.getColumna());
 
         while (primerNodo != n) {
-            estadoFusionado efn = this.fucionarEstados(AFD, n);
+            estadoFusionado efn = this.fusionarEstados(AFD, n);
             String nombreEst = efn.e.getNombreEstado();
             String nombreTransicion = "";
             tripleta axi = (tripleta) n.getDato();
             int idAct = axi.getFila(); //Estado actual
             int idS = axi.getColumna();//Simbolo de entrada actual
-            estado std = (estado) this.estado.get(idAct);
+            estado std = (estado) this.estados.get(idAct);
             String estadoAct = (String) std.getNombreEstado();
             String simboloE = (String) this.simbolosEntrada.get(idS);
-            if (this.crearInsertarEstado(efn, AFD)) { //Si el destino del fusionado existe insertarlo                   
+            if (this.crearInsertarEstados(efn, AFD)) { //Si el destino del fusionado existe insertarlo                   
                 nombreTransicion = nombreEst;
             }
             AFD.cargarTransicion(simboloE, estadoAct, nombreTransicion);
@@ -176,37 +164,19 @@ public class AF {
         tripleta auxt = (tripleta) AFD.mat.primerNodo().getDato();
         Dnode x = (Dnode) auxt.getValor();
         int k = 0;
-        ArrayList<estado> estadosAFD = AFD.estado;
+        ArrayList<estado> estadosAFD = AFD.estados;
         while (!AFD.mat.findeRecorrido(x)) { //Recorre los estados para agregar sus transiciones
             int i = 0;
             estado estAux = estadosAFD.get(k + 1);
-            tripleta filaTripleta = (tripleta) x.getDato();
-//            int fila = filaTripleta.getFila();
             ArrayList indicesEstados = (ArrayList) this.transicionEstadoAFD.get(k); //Los indices del estado al que hace transición por entrada de cada simbolo
             String nombreTransicion = "";
             while (i <= this.simbolosEntrada.size() - 1) { //Po cada simbolo se inserta un estado
                 ArrayList a = (ArrayList) indicesEstados.get(i);
-                String nombreEst = this.decodificarNombreEstado(this.estado, a); //Decodifica el nombre del estado al que se hace tansicion correpondiente al simbolo de la posicion i
-
-                //Codigo para obtener si el nuevo estado es de rechazo o acepacion
-                String tipoE = "Rechazo";
-//                ArrayList auxAee = (ArrayList) this.transicionEstadoAFD.get(k);
-                int nj = a.size();
-                for (int ij = 0; ij <= nj - 1; ij++) {
-                    int j = (int) a.get(ij);
-
-                    //verificar que no exista la fusión 
-                    estado et = (estado) this.estado.get(j);
-                    //obtenerTransiciones al nuevo estado
-                    //Verificar que no exista permutando los indices
-                    if (et.getTipoEstado().equals("Aceptacion")) {  //SI uno de los estados a fusionar es de aceptacion 
-                        tipoE = "Aceptacion";
-                    }
-                }
-
+                String nombreEst = this.decodificarNombreEstado(this.estados, a); //Decodifica el nombre del estado al que se hace tansicion correpondiente al simbolo de la posicion i
+                String tipoE = this.obtenerTipoEstado(a);
                 estado e = new estado(nombreEst, tipoE, false);
                 estadoFusionado efn = new estadoFusionado(e, (ArrayList) indicesEstados.get(i)); //Estado al que hace transicion
-                this.crearInsertarEstado(efn, AFD);  //Si el destino del fusionado existe insertarlo, sino crearlo e insertarlo                                  
+                this.crearInsertarEstados(efn, AFD);  //Si el destino del fusionado existe insertarlo, sino crearlo e insertarlo                                  
                 nombreTransicion = nombreEst;
                 String simboloEntrada = (String) AFD.simbolosEntrada.get(i);
                 AFD.cargarTransicion(simboloEntrada, estAux.getNombreEstado(), nombreTransicion);
@@ -220,6 +190,37 @@ public class AF {
         return AFD;
     }
 
+    private void eliminarRepeticionesArrayList(ArrayList a) {
+        Set<String> set;
+        set = new HashSet<>(a);
+        a.clear();
+        a.addAll(set);
+    }
+
+    /**
+     * Metodo que retorna un String que indica si el estado es de "Rechazo" o "Aceptacion"
+     * @param indicesEstado ArrayList que contiene el indice o indices en el AFND del estado procesado o fusionado a evaluar.
+     * @return retorna un String con "Aceptacion" o "Rechazo"
+     */
+    public String obtenerTipoEstado(ArrayList indicesEstado) {
+        String tipoE = "Rechazo";
+        int nj = indicesEstado.size();
+        for (int ij = 0; ij <= nj - 1; ij++) {
+            int j = (int) indicesEstado.get(ij);
+            estado et = (estado) this.estados.get(j);
+            if (et.getTipoEstado().equals("Aceptacion")) {
+                tipoE = "Aceptacion";
+            }
+        }
+        return tipoE;
+    }
+    
+    /**
+     * Metodo que recibe un ArrayList con indices de estados como parametro y regresa el nombre de los parametros concatenados 
+     * @param estados ArrayList con los estados de AFND
+     * @param arrIndiceE
+     * @return 
+     */
     public String decodificarNombreEstado(ArrayList<estado> estados, ArrayList arrIndiceE) {
         int n = arrIndiceE.size();
         String nombreEstado = "";
@@ -229,15 +230,23 @@ public class AF {
             nombreEstado = nombreEstado + aux.getNombreEstado();
         }
         return nombreEstado;
-
     }
-
+    
+    
     public matrizForma1 getMat() {
         return mat;
     }
 
+    public ArrayList getSimbolosEntrada() {
+        return simbolosEntrada;
+    }
+
+    public void setSimbolosEntrada(ArrayList simbolosEntrada) {
+        this.simbolosEntrada = simbolosEntrada;
+    }
+
     public ArrayList getEstados() {
-        return estado;
+        return estados;
     }
 
     public String recuperSimboloEntrada(int i) {
@@ -246,9 +255,8 @@ public class AF {
     }
 
     public estado recuperEstdo(int i) {
-        estado state = (estado) estado.get(i);
+        estado state = (estado) estados.get(i);
         return state;
-
     }
 
     public File getFichero() {
@@ -260,21 +268,20 @@ public class AF {
         tripleta t = (tripleta) mat.getMat().getDato();
         t.setColumna(t.getColumna() + 1);
         mat.getMat().setDato(t);
-
     }
 
     public void insertarEstado(estado estado) {
-        this.estado.add(estado);
+        this.estados.add(estado);
         tripleta t = (tripleta) mat.getMat().getDato();
         t.setFila(t.getFila() + 1);
         mat.getMat().setDato(t);
-        mat.agregarNodoCabeza(this.estado.lastIndexOf(estado));
+        mat.agregarNodoCabeza(this.estados.lastIndexOf(estado));
     }
 
     public boolean validarExistenciaEstado(estado state, String contenido) {
         boolean respuesta = false;
 
-        int i = this.estado.lastIndexOf(estado);
+        int i = this.estados.lastIndexOf(estados);
         int j = this.simbolosEntrada.lastIndexOf(contenido);
 
         return respuesta;
@@ -297,12 +304,12 @@ public class AF {
 
     }
 
-    public int buscarEstadoEnColeccion(String estado) {
+     public int buscarEstadoEnColeccion(String estado) {
         int respuesta = -1;
         estado st;
 
-        for (int i = 0; i < this.estado.size(); i++) {
-            st = (estado) this.estado.get(i);
+        for (int i = 0; i < this.estados.size(); i++) {
+            st = (estado) this.estados.get(i);
             if (st.getNombreEstado().equals(estado)) {
                 respuesta = i;
             }
@@ -313,7 +320,7 @@ public class AF {
 
     public boolean evaluarTipoAutomataEstadosInciales() {
         //Validemos si existen mas de dos estados iniciales
-        ArrayList listaEstado = this.estado;
+        ArrayList listaEstado = this.estados;
         estado st;
         boolean respuesta = false;
         int cont = 0;
@@ -388,7 +395,7 @@ public class AF {
             tx = (tripleta) p.getDato();
             estado = tx.getFila();
 
-            st = (estado) this.estado.get(estado);
+            st = (estado) this.estados.get(estado);
             if (st.isEstadoIncial()) {
                 automaDete.insertarEstado(st);
                 q = p.getLd();
@@ -456,7 +463,7 @@ public class AF {
 
                         estado estadoDeterministico = new estado(auxCadena, tipoEstado, true);
                         automaDete.insertarEstado(estadoDeterministico);
-                        automaDete.getMat().agregarTransicion(txs.getColumna(), txs.getFila(), automaDete.estado.lastIndexOf(estadoDeterministico));
+                        automaDete.getMat().agregarTransicion(txs.getColumna(), txs.getFila(), automaDete.estados.lastIndexOf(estadoDeterministico));
 
                     }
 
@@ -692,8 +699,8 @@ public class AF {
             entrada = entrada + simbolosEntrada.get(j) + ",";
         }
 
-        for (int i = 0; i < this.estado.size(); i++) {
-            estado st = (estado) estado.get(i);
+        for (int i = 0; i < this.estados.size(); i++) {
+            estado st = (estado) this.estados.get(i);
 
             estados = estados + st.getNombreEstado() + ",";
 
@@ -738,10 +745,10 @@ public class AF {
 
                 for (int i = 0; i < k.size(); i++) {
                     //System.out.println(qf + "-" + qc + "-" + k.get(i));
-                    estado st = (estado) this.estado.get(qf);
+                    estado st = (estado) this.estados.get(qf);
                     String entrada = this.simbolosEntrada.get(qc).toString();
                     int valor = (Integer) k.get(i);
-                    estado destino = (estado) this.estado.get(valor);
+                    estado destino = (estado) this.estados.get(valor);
                     //transiciones=transiciones+st.getNombreEstado()+","+entrada+","+destino.getNombreEstado()+","+"\n";
                     transiciones = st.getNombreEstado() + "," + entrada + "," + destino.getNombreEstado() + ",";
                     System.out.println(transiciones);
@@ -805,7 +812,7 @@ public class AF {
                 estado status = recuperEstadoIncial();
                 estadoActual = status;
                 System.out.println("Estado Incial:" + estadoActual.getNombreEstado());
-                filaEstado = this.estado.lastIndexOf(status);
+                filaEstado = this.estados.lastIndexOf(status);
                 System.out.println(filaEstado);
                 contador = contador + 1;
                 p = this.mat.recuperaNodoCabeza(filaEstado);
@@ -876,7 +883,7 @@ public class AF {
         while (!mat.findeRecorrido(p)) {
             tripleta txs = (tripleta) p.getDato();
             int filaEstado = (Integer) txs.getFila();
-            st = (estado) this.estado.get(filaEstado);
+            st = (estado) this.estados.get(filaEstado);
             if (st.isEstadoIncial()) {
                 return st;
             }
@@ -892,8 +899,8 @@ public class AF {
             c.agregarColumnasJtableSimplificado((String) simbolosEntrada.get(i));
         }
 
-        for (int j = 0; j < this.estado.size(); j++) {
-            estado st = (estado) estado.get(j);
+        for (int j = 0; j < this.estados.size(); j++) {
+            estado st = (estado) estados.get(j);
             c.agregarFilasJtableSimplificado(st.getNombreEstado());
         }
 
@@ -911,10 +918,10 @@ public class AF {
 
                 for (int i = 0; i < k.size(); i++) {
                     //System.out.println(qf + "-" + qc + "-" + k.get(i));
-                    estado st = (estado) this.estado.get(qf);
+                    estado st = (estado) this.estados.get(qf);
                     String entrada = this.simbolosEntrada.get(qc).toString();
                     int valor = (Integer) k.get(i);
-                    estado destino = (estado) this.estado.get(valor);
+                    estado destino = (estado) this.estados.get(valor);
                     c.agregarTransicionesJtableSimplificado(destino.getNombreEstado(), qf, qc);
 
                 }
@@ -929,11 +936,11 @@ public class AF {
     }
 
     public void convertirAutomata() {
-        AF AFD = this.cvAFNDtoAFD();
+        AF AFD = this.transformarAFNDaAFD();
         this.mat = AFD.mat;
         this.cadena = AFD.cadena;
         this.simbolosEntrada = AFD.simbolosEntrada;
-        this.estado = AFD.estado;
+        this.estados = AFD.estados;
     }
 
     public void cargarAutomataConvertido(controlador c) {
@@ -942,8 +949,8 @@ public class AF {
             c.agregarColumnasJtable3((String) simbolosEntrada.get(i));
         }
 
-        for (int j = 0; j < this.estado.size(); j++) {
-            estado st = (estado) estado.get(j);
+        for (int j = 0; j < this.estados.size(); j++) {
+            estado st = (estado) estados.get(j);
             c.agregarFilasJtable3(st.getNombreEstado());
         }
 
@@ -961,10 +968,10 @@ public class AF {
 
                 for (int i = 0; i < k.size(); i++) {
                     //System.out.println(qf + "-" + qc + "-" + k.get(i));
-                    estado st = (estado) this.estado.get(qf);
+                    estado st = (estado) this.estados.get(qf);
                     String entrada = this.simbolosEntrada.get(qc).toString();
                     int valor = (Integer) k.get(i);
-                    estado destino = (estado) this.estado.get(valor);
+                    estado destino = (estado) this.estados.get(valor);
                     //c.agregarTransicionesJtableSimplificado(destino.getNombreEstado(), qf, qc);
                     c.agregarTransicionesJtable3(destino.getNombreEstado(), qf, qc);
 
@@ -978,5 +985,6 @@ public class AF {
         }
 
     }
+
 
 }

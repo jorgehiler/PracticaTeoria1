@@ -41,22 +41,24 @@ public class estadoFusionado {
         this.transiciones = transiciones;
     }
 
-    public boolean existeDestino(ArrayList estadosExistentes, String nombreEstado) {
+    /**
+     * Metodo que retorna true si un estado "nombreEstado" existe y false si no. Si el estado no existe y retorna false actualiza la variable nombreNuevoEstado, que es el nombre del estado que se creará luego de que se evaluara que no existe.
+     * @param estadosExistentes Lista de estados del autómata en el que se evaluará la existencia del estado
+     * @param nombreEstado nombre del estdo a evaluar existencia
+     * @return 
+     */
+    public boolean existeEstado(ArrayList estadosExistentes, String nombreEstado) {
         String estado = "";
-
-        //Construir string de estado a buscar
+        //Construir string de estado a evaluar Existencia
         for (int i = 1; i <= this.transiciones.size(); i++) {
             int k = (int) this.transiciones.get(i - 1);
             estado = estado + Integer.toString(k);
         }
-        //Permutar estado a bucar
+        //Permutar estado a evaluar Existencia
         permute(estado, 0, estado.length());
         //Buscarlo entre estados existentes
         for (int i = 0; i <= estadosExistentes.size() - 1; i++) {
             estado aux = (estado) estadosExistentes.get(i);
-//            ArrayList auxA = (ArrayList) aux.getValor();
-//            int auxIndice =  (int) auxA.get(i);
-//            estado auxE = (estado) estadosExistentes.get(auxIndice);
             String estadoAnalizado = aux.getNombreEstado();
             if (estadoAnalizado.equals(nombreEstado)) {
                 this.indiceEstadoExistente = i;
@@ -64,9 +66,7 @@ public class estadoFusionado {
                 return true;
             }
         }
-
         this.nombrenuevoEstado = estado;
-
         return false;
     }
 
