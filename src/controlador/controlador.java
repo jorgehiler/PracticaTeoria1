@@ -366,7 +366,8 @@ public class controlador implements ActionListener, MouseListener {
             }
         } else if (comando.equals("SimplificarAutomataDeterministico")) {
             JOptionPane.showMessageDialog(null, "Simplificando Automata..");
-            this.modelo.simplificarAutomataDeterministico(this);
+            //this.modelo.simplificarAutomataDeterministico(this);
+            this.modelo.calcularEstadoEquivalentes();
             this.view.getBotonSimplificar().setEnabled(false);
 
         } else if (comando.equals("AbrirNuevoAutomata")) {

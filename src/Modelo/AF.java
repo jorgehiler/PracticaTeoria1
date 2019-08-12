@@ -15,9 +15,9 @@ import java.util.List;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import sun.font.TrueTypeFont;
-import java.lang.Object;
 import java.util.HashSet;
 import java.util.Set;
+import jdk.nashorn.internal.parser.TokenType;
 
 public class AF {
 
@@ -28,12 +28,20 @@ public class AF {
     private String cadena;
     private final ArrayList transicionEstadoAFD = new ArrayList();
     private ArrayList simbolosEntrada;
+    private ArrayList particiones;
+    private ArrayList nuevaParticion;
+    private int flag;
+    private int numeroParticiones;
 
     public AF() {
         this.simbolosEntrada = new ArrayList();
         this.estados = new ArrayList();
         this.fc = new JFileChooser();
         this.fichero = null;
+        this.particiones = new ArrayList();
+        this.nuevaParticion = new ArrayList();
+        this.flag = 0;
+        this.numeroParticiones = 0;
     }
 
     public void construirAutomata() {
@@ -90,9 +98,9 @@ public class AF {
         ArrayList estadosOrigen = ef.transiciones;
         int cantidadSimbolos = this.simbolosEntrada.size();
         int j = 0;
-        while (j <= cantidadSimbolos - 1) { 
+        while (j <= cantidadSimbolos - 1) {
             estadosDestino = new ArrayList();
-            for (int i = 0; i <= estadosOrigen.size() - 1; i++) { 
+            for (int i = 0; i <= estadosOrigen.size() - 1; i++) {
                 int origen = (int) estadosOrigen.get(i);
                 Dnode estadoDestino = this.mat.recuperNodo(origen, j);
                 ArrayList aux = ut.getArrayDataDnode(estadoDestino);
@@ -108,10 +116,12 @@ public class AF {
     }
 
     /**
-     * Metodo que crea e inserta de ser necesario, los estados a los que hace transicion el estadoFusionado indicaod
+     * Metodo que crea e inserta de ser necesario, los estados a los que hace
+     * transicion el estadoFusionado indicaod
+     *
      * @param ef
      * @param AFD Automata deterministico al que pertenece el estado fusionado.
-     * @return 
+     * @return
      */
     public Boolean crearInsertarEstados(estadoFusionado ef, AF AFD) {
         String nombreEst = ef.e.getNombreEstado();
@@ -198,8 +208,11 @@ public class AF {
     }
 
     /**
-     * Metodo que retorna un String que indica si el estado es de "Rechazo" o "Aceptacion"
-     * @param indicesEstado ArrayList que contiene el indice o indices en el AFND del estado procesado o fusionado a evaluar.
+     * Metodo que retorna un String que indica si el estado es de "Rechazo" o
+     * "Aceptacion"
+     *
+     * @param indicesEstado ArrayList que contiene el indice o indices en el
+     * AFND del estado procesado o fusionado a evaluar.
      * @return retorna un String con "Aceptacion" o "Rechazo"
      */
     public String obtenerTipoEstado(ArrayList indicesEstado) {
@@ -214,12 +227,14 @@ public class AF {
         }
         return tipoE;
     }
-    
+
     /**
-     * Metodo que recibe un ArrayList con indices de estados como parametro y regresa el nombre de los parametros concatenados 
+     * Metodo que recibe un ArrayList con indices de estados como parametro y
+     * regresa el nombre de los parametros concatenados
+     *
      * @param estados ArrayList con los estados de AFND
      * @param arrIndiceE
-     * @return 
+     * @return
      */
     public String decodificarNombreEstado(ArrayList<estado> estados, ArrayList arrIndiceE) {
         int n = arrIndiceE.size();
@@ -231,8 +246,7 @@ public class AF {
         }
         return nombreEstado;
     }
-    
-    
+
     public matrizForma1 getMat() {
         return mat;
     }
@@ -304,7 +318,7 @@ public class AF {
 
     }
 
-     public int buscarEstadoEnColeccion(String estado) {
+    public int buscarEstadoEnColeccion(String estado) {
         int respuesta = -1;
         estado st;
 
@@ -986,5 +1000,171 @@ public class AF {
 
     }
 
+    /**
+     * Método que halla estados equivalentes
+     *
+     */
+    public void calcularEstadoEquivalentes() {
+
+        Particion particionzero = new Particion();
+        Particion particionone = new Particion();
+
+        for (int i = 0; i < this.estados.size(); i++) {
+            estado tmpstate = (estado) this.estados.get(i);
+
+            if (tmpstate.getTipoEstado().equals("Rechazo")) {
+                //Cree la Partición 0
+                particionzero.setConjunto(0);
+                particionzero.getEstados().add(tmpstate);
+            }
+            if (tmpstate.getTipoEstado().equals("Aceptacion")) {
+                //Creer la Partición 1
+                particionone.setConjunto(1);
+                particionone.getEstados().add(tmpstate);
+            }
+
+        }
+
+        this.particiones.add(particionzero);
+        this.particiones.add(particionone);
+        this.numeroParticiones = 2;
+
+        for (int j = 0; j < this.simbolosEntrada.size(); j++) ///Simbolos
+        {
+            this.nuevaParticion = new ArrayList();
+            Particion nuevaPar = new Particion();
+            Particion basePar = new Particion();
+
+            for (int i = 0; i < this.particiones.size(); i++) //Particiones
+            {
+                int flanco = 0;
+                Particion particiontmp = (Particion) this.particiones.get(i);
+                for (int k = 0; k < particiontmp.getEstados().size(); k++) {
+                    estado state = particiontmp.getEstados().get(k);
+                    int indice = this.estados.lastIndexOf(state);
+                    ArrayList respuesta = this.mat.recuperarTransicion(indice, j);
+                    int index = (int) respuesta.get(0);
+                    estado estadoTransicion = (estado) this.estados.get(index);
+                    boolean response = particiontmp.verificaPertenenciaParticion(estadoTransicion);
+
+                    //System.out.println("Estado Origen" + state.getNombreEstado());
+                    //System.out.println("Hace Transicion a" + estadoTransicion.getNombreEstado());
+                    if (!response) {
+                        flanco++;
+                        nuevaPar.getEstados().add(state);
+
+                    } else {
+                        //System.out.println("holal"+state.getNombreEstado()); 
+                        basePar.getEstados().add(state);
+                        //state.getNombreEstado();
+                    }
+
+                }
+                if (flanco != 0) {
+                    
+                     //Debe Agregar un nuevo Estado
+                     //this.nuevaParticion.add(nuevaPar);
+                    //Particion particionactualizada=this.reorganizarParticion(particiontmp);
+                    //System.out.println("Particion---------------");
+                    //particionactualizada.imprimirConjuntoParticion();
+                    //basePar.imprimirConjuntoParticion();
+                    //this.particiones.add(nuevaPar);
+                    //this.particiones.set(i,basePar);
+                    this.particiones=new ArrayList();
+                    this.particiones.add(basePar);
+                    this.particiones.add(nuevaPar);
+                    
+                    //this.particiones.remove(i);
+                    //this.particiones.add(basePar);
+                    System.out.println("------Hello----");
+                     //this.recorrerParticiones();
+                    
+                   
+                    
+                    //System.out.println("Particion-------------------");
+                    //nuevaPar.imprimirConjuntoParticion();
+
+                   
+
+                }
+               
+                
+                 
+            }
+            
+            
+            
+            
+
+        }
+        
+       this.recorrerParticiones();
+
+
+       
+
+    }
+
+    public Particion reorganizarParticion(Particion group) {
+        //Vieja Particion, actualiza y luego agregar la nueva particion en array list de particiones
+        ArrayList listadoEstado = group.getEstados();
+
+        for (int i = 0; i < listadoEstado.size(); i++) {
+            estado tmp = (estado) listadoEstado.get(i);
+            Particion parti = (Particion) this.nuevaParticion.get(0);
+            //int response = parti.getEstados().lastIndexOf(tmp);
+
+            boolean respon = parti.verificaPertenenciaParticion(tmp);
+            //System.out.println(response);
+            /*if (response != -1) {
+                listadoEstado.remove(response);
+            }
+            
+            
+             */
+            if (respon) {
+                //Eliminelo
+
+                listadoEstado.remove(i);
+            }
+        }
+
+        Particion particionclonada = new Particion();
+
+        particionclonada.setEstados(listadoEstado);
+        return particionclonada;
+
+    }
+
+    public void recorrerParticiones() {
+        for (int i = 0; i < this.particiones.size(); i++) {
+            System.out.println("Particion");
+            Particion particion = (Particion) this.particiones.get(i);
+            particion.imprimirConjuntoParticion();
+        }
+    }
+
+    public void checkConjuntoTransicion(int simobolo, Particion group) {
+        ArrayList conjuntoTmp = group.getEstados();
+
+        for (int i = 0; i < conjuntoTmp.size(); i++) {
+            estado estadocheck = (estado) conjuntoTmp.get(i);
+            int filaEstado = this.estados.lastIndexOf(estadocheck);
+            int columna = simobolo;
+            ArrayList respuesta = this.mat.recuperarTransicion(filaEstado, columna);//Se recupera es un index del arraylist
+            int index = (int) respuesta.get(0);
+            estado estadoTransicion = (estado) this.estados.get(index);
+            boolean response = group.verificaPertenenciaParticion(estadoTransicion);
+
+            if (!response && this.nuevaParticion.size() == 0) {
+                Particion nuevaPar = new Particion();
+                nuevaPar.getEstados().add(estadocheck);
+                this.nuevaParticion.add(nuevaPar);
+
+            }
+
+        }
+
+    }
 
 }

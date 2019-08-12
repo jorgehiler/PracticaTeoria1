@@ -1,6 +1,6 @@
 package Modelo;
 
-import com.sun.xml.internal.messaging.saaj.packaging.mime.util.QPDecoderStream;
+//import com.sun.xml.internal.messaging.saaj.packaging.mime.util.QPDecoderStream;
 import java.util.ArrayList;
 
 public class matrizForma1 {
@@ -294,7 +294,7 @@ public class matrizForma1 {
      * entrada)
      * @return
      */
-    public ArrayList recuperarTransicion(int fila, int columna) {
+   public ArrayList recuperarTransicion(int fila, int columna) {
         Dnode p, q;
         tripleta dato, ok;
         ArrayList respuesta;
